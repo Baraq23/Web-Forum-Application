@@ -130,6 +130,7 @@ export class NavManager {
 
         if (success) {
             this.renderUnauthenticatedNav();
+            this.router.navigate('/');
         } else {
             console.error("Logout failed");
         }
