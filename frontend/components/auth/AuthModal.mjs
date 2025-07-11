@@ -114,16 +114,27 @@ export class AuthModal {
             return;
         }
 
-        const result = await this.authManager.login(email, password);
+        try {
+            const result = await this.authManager.login(email, password);
 
-        if (result.success) {
-            this.showNotification('Login successful!', 'success');
-            this.hideModal();
-            if (this.onAuthSuccess) {
-                this.onAuthSuccess(result.user);
+            if (result.success) {
+                this.showNotification('Login successful! Welcome back!', 'success');
+                this.hideModal();
+                if (this.onAuthSuccess) {
+                    this.onAuthSuccess(result.user);
+                }
+            } else {
+                // Show specific error message
+                this.showNotification('Invalid email or password. Please check your credentials and try again.', 'error');
+
+                // Show suggestion after a brief delay
+                setTimeout(() => {
+                    this.showNotification('Don\'t have an account? Click "Sign Up" to create one!', 'info');
+                }, 2000);
             }
-        } else {
-            this.showNotification('Login failed. Please check your credentials.', 'error');
+        } catch (error) {
+            console.error('Login error:', error);
+            this.showNotification('Unable to log in. Please check your connection and try again.', 'error');
         }
     }
 
@@ -195,16 +206,45 @@ export class AuthModal {
             submitFormData.append("avatar", avatarInput.files[0]);
         }
 
-        const result = await this.authManager.register(submitFormData);
+        try {
+            const result = await this.authManager.register(submitFormData);
 
-        if (result.success) {
-            this.showNotification('Registration successful! Welcome to the forum!', 'success');
-            this.hideModal();
-            if (this.onAuthSuccess) {
-                this.onAuthSuccess(result.user);
+            if (result.success) {
+                this.showNotification('Registration successful! Welcome to the forum! 🎉', 'success');
+                this.hideModal();
+                if (this.onAuthSuccess) {
+                    this.onAuthSuccess(result.user);
+                }
+            } else {
+                // Provide specific error messages based on the error type
+                let errorMessage = result.error;
+                let suggestion = '';
+
+                if (errorMessage.includes('email') && errorMessage.includes('exists')) {
+                    errorMessage = 'This email address is already registered.';
+                    suggestion = 'Try logging in instead, or use a different email address.';
+                } else if (errorMessage.includes('username') && errorMessage.includes('exists')) {
+                    errorMessage = 'This username is already taken.';
+                    suggestion = 'Please choose a different username.';
+                } else if (errorMessage.includes('password')) {
+                    errorMessage = 'Password does not meet requirements.';
+                    suggestion = 'Password must be at least 8 characters long.';
+                } else if (errorMessage.includes('email') && errorMessage.includes('invalid')) {
+                    errorMessage = 'Please enter a valid email address.';
+                    suggestion = 'Check the email format and try again.';
+                }
+
+                this.showNotification(errorMessage, 'error');
+
+                if (suggestion) {
+                    setTimeout(() => {
+                        this.showNotification(suggestion, 'info');
+                    }, 2000);
+                }
             }
-        } else {
-            this.showNotification(`Registration failed: ${result.error}`, 'error');
+        } catch (error) {
+            console.error('Registration error:', error);
+            this.showNotification('Unable to create account. Please check your connection and try again.', 'error');
         }
     }
 

@@ -110,9 +110,20 @@ export class PostForm {
             const errorInfo = ApiUtils.handleError(error, 'post creation');
 
             if (errorInfo.requiresAuth) {
-                this.authModal.showLoginModal();
+                this.showNotification('You need to be logged in to create posts.', 'warning');
+                setTimeout(() => {
+                    this.showNotification('Click "Login" to sign in or "Sign Up" to create an account.', 'info');
+                }, 1500);
+                setTimeout(() => {
+                    this.authModal.showLoginModal();
+                }, 3000);
             } else {
                 this.showNotification(`Failed to create post: ${errorInfo.message}`, 'error');
+                if (errorInfo.suggestion) {
+                    setTimeout(() => {
+                        this.showNotification(errorInfo.suggestion, 'info');
+                    }, 2000);
+                }
             }
         }
     }

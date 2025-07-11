@@ -58,7 +58,7 @@ export class App {
             this.reactionManager = new ReactionManager(this.authModal, this.notificationManager);
             
             // Initialize comment manager
-            this.commentManager = new CommentManager(this.authModal, this.reactionManager);
+            this.commentManager = new CommentManager(this.authModal, this.reactionManager, this.notificationManager);
             
             // Initialize post manager
             this.postManager = new PostManager(this.reactionManager, this.commentManager);

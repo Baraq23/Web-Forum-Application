@@ -61,11 +61,22 @@ export class ReactionManager {
             await this.loadPostsLikes();
         } catch (error) {
             const errorInfo = ApiUtils.handleError(error, 'post reaction');
-            
+
             if (errorInfo.requiresAuth) {
-                this.authModal.showLoginModal();
+                this.showNotification('You need to be logged in to like or dislike posts.', 'warning');
+                setTimeout(() => {
+                    this.showNotification('Sign in to interact with posts and join the conversation!', 'info');
+                }, 1500);
+                setTimeout(() => {
+                    this.authModal.showLoginModal();
+                }, 3000);
             } else {
                 this.showNotification(errorInfo.message, 'error');
+                if (errorInfo.suggestion) {
+                    setTimeout(() => {
+                        this.showNotification(errorInfo.suggestion, 'info');
+                    }, 2000);
+                }
             }
         }
     }
@@ -88,11 +99,22 @@ export class ReactionManager {
             await this.loadCommentsLikes();
         } catch (error) {
             const errorInfo = ApiUtils.handleError(error, 'comment reaction');
-            
+
             if (errorInfo.requiresAuth) {
-                this.authModal.showLoginModal();
+                this.showNotification('You need to be logged in to like or dislike comments.', 'warning');
+                setTimeout(() => {
+                    this.showNotification('Join the community to engage with comments!', 'info');
+                }, 1500);
+                setTimeout(() => {
+                    this.authModal.showLoginModal();
+                }, 3000);
             } else {
                 this.showNotification(errorInfo.message, 'error');
+                if (errorInfo.suggestion) {
+                    setTimeout(() => {
+                        this.showNotification(errorInfo.suggestion, 'info');
+                    }, 2000);
+                }
             }
         }
     }
