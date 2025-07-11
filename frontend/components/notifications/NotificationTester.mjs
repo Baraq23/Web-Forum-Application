@@ -266,13 +266,13 @@ export class NotificationTester {
     }
 }
 
-// Global function to create test interface (for console access)
+// Global function to create test interface (for console access only)
 window.createNotificationTests = function() {
     if (window.forumApp && window.forumApp.getNotificationManager) {
         const tester = new NotificationTester(window.forumApp.getNotificationManager());
         tester.createTestInterface();
         console.log('Notification test interface created! You can also run: window.testNotifications()');
-        
+
         // Make tester globally available
         window.notificationTester = tester;
         window.testNotifications = () => tester.runAllTests();
@@ -280,14 +280,3 @@ window.createNotificationTests = function() {
         console.error('Forum app or notification manager not available');
     }
 };
-
-// Auto-create test interface in development
-if (window.location.hostname === 'localhost') {
-    document.addEventListener('DOMContentLoaded', () => {
-        setTimeout(() => {
-            if (window.forumApp) {
-                window.createNotificationTests();
-            }
-        }, 2000);
-    });
-}
