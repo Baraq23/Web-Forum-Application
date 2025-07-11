@@ -380,7 +380,9 @@ export class PostDetailView extends BaseView {
         } else {
             // Fallback: copy to clipboard
             navigator.clipboard.writeText(window.location.href).then(() => {
-                alert('Post URL copied to clipboard!');
+                this.showNotification('Post URL copied to clipboard!', 'success');
+            }).catch(() => {
+                this.showNotification('Failed to copy URL to clipboard', 'error');
             });
         }
     }
@@ -402,6 +404,20 @@ export class PostDetailView extends BaseView {
             });
         } catch (error) {
             return 'Unknown';
+        }
+    }
+
+    /**
+     * Show notification using the notification manager or fallback to alert
+     * @param {string} message - Message to display
+     * @param {string} type - Notification type: 'success', 'error', 'warning', 'info'
+     */
+    showNotification(message, type = 'info') {
+        if (this.app && this.app.getNotificationManager) {
+            this.app.getNotificationManager().showToast(message, type);
+        } else {
+            // Fallback to browser alert if notification manager is not available
+            alert(message);
         }
     }
 }

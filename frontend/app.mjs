@@ -19,7 +19,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     } catch (error) {
         console.error('Failed to initialize Forum Application:', error);
-        alert('Failed to load the application. Please refresh the page.');
+        showInitializationError('Failed to load the application. Please refresh the page.');
     }
 });
 

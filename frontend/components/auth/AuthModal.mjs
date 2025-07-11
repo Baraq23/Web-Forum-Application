@@ -5,13 +5,14 @@
 import { AuthManager } from './AuthManager.mjs';
 
 export class AuthModal {
-    constructor(authManager, onAuthSuccess) {
+    constructor(authManager, onAuthSuccess, notificationManager = null) {
         this.authManager = authManager;
         this.onAuthSuccess = onAuthSuccess;
+        this.notificationManager = notificationManager;
         this.modal = null;
         this.mainContainer = null;
         this.cont = null;
-        
+
         this.init();
     }
 
@@ -112,19 +113,20 @@ export class AuthModal {
                 const password = document.getElementById('signin-password').value;
 
                 if (!email || !password) {
-                    alert('Please fill in all fields');
+                    this.showNotification('Please fill in all fields', 'warning');
                     return;
                 }
 
                 const result = await this.authManager.login(email, password);
 
                 if (result.success) {
+                    this.showNotification('Login successful!', 'success');
                     this.hideModal();
                     if (this.onAuthSuccess) {
                         this.onAuthSuccess(result.user);
                     }
                 } else {
-                    alert('Login failed. Please check your credentials.');
+                    this.showNotification('Login failed. Please check your credentials.', 'error');
                 }
             });
         }
@@ -142,7 +144,7 @@ export class AuthModal {
                 // Validate form data
                 const validation = this.authManager.validateRegistrationData(formData);
                 if (!validation.valid) {
-                    alert(validation.error);
+                    this.showNotification(validation.error, 'warning');
                     return;
                 }
 
@@ -151,7 +153,7 @@ export class AuthModal {
                 if (avatarInput.files.length > 0) {
                     const avatarValidation = this.authManager.validateAvatarFile(avatarInput.files[0]);
                     if (!avatarValidation.valid) {
-                        alert(avatarValidation.error);
+                        this.showNotification(avatarValidation.error, 'warning');
                         return;
                     }
                 }
@@ -169,12 +171,13 @@ export class AuthModal {
                 const result = await this.authManager.register(submitFormData);
 
                 if (result.success) {
+                    this.showNotification('Registration successful! Welcome to the forum!', 'success');
                     this.hideModal();
                     if (this.onAuthSuccess) {
                         this.onAuthSuccess(result.user);
                     }
                 } else {
-                    alert(`Registration failed: ${result.error}`);
+                    this.showNotification(`Registration failed: ${result.error}`, 'error');
                 }
             });
         }
@@ -298,5 +301,27 @@ export class AuthModal {
                 this.hideModal();
             }
         });
+    }
+
+    /**
+     * Show notification using the notification manager or fallback to alert
+     * @param {string} message - Message to display
+     * @param {string} type - Notification type: 'success', 'error', 'warning', 'info'
+     */
+    showNotification(message, type = 'info') {
+        if (this.notificationManager) {
+            this.notificationManager.showToast(message, type);
+        } else {
+            // Fallback to browser alert if notification manager is not available
+            alert(message);
+        }
+    }
+
+    /**
+     * Set the notification manager (for dependency injection)
+     * @param {NotificationManager} notificationManager - Notification manager instance
+     */
+    setNotificationManager(notificationManager) {
+        this.notificationManager = notificationManager;
     }
 }

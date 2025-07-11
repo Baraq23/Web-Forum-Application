@@ -11,6 +11,7 @@ import { ReactionManager } from '../reactions/ReactionManager.mjs';
 import { PostManager } from '../posts/PostManager.mjs';
 import { PostForm } from '../posts/PostForm.mjs';
 import { CommentManager } from '../comments/CommentManager.mjs';
+import { NotificationManager } from '../notifications/NotificationManager.mjs';
 
 export class App {
     constructor() {
@@ -33,9 +34,12 @@ export class App {
      */
     async init() {
         try {
+            // Initialize notification system first
+            this.notificationManager = new NotificationManager();
+
             // Initialize core managers
             this.authManager = new AuthManager();
-            this.authModal = new AuthModal(this.authManager, (user) => this.onAuthSuccess(user));
+            this.authModal = new AuthModal(this.authManager, (user) => this.onAuthSuccess(user), this.notificationManager);
             
             // Initialize navigation
             this.navManager = new NavManager(this.authManager, this.authModal);
@@ -47,7 +51,7 @@ export class App {
             this.categoryManager = new CategoryManager((categoryId) => this.onCategoryFilter(categoryId));
             
             // Initialize reaction manager
-            this.reactionManager = new ReactionManager(this.authModal);
+            this.reactionManager = new ReactionManager(this.authModal, this.notificationManager);
             
             // Initialize comment manager
             this.commentManager = new CommentManager(this.authModal, this.reactionManager);
@@ -57,9 +61,10 @@ export class App {
             
             // Initialize post form
             this.postForm = new PostForm(
-                this.categoryManager, 
-                this.authModal, 
-                () => this.onPostCreated()
+                this.categoryManager,
+                this.authModal,
+                () => this.onPostCreated(),
+                this.notificationManager
             );
 
             // Setup router first
@@ -184,6 +189,14 @@ export class App {
     }
 
     /**
+     * Get the notification manager instance
+     * @returns {NotificationManager} - Notification manager instance
+     */
+    getNotificationManager() {
+        return this.notificationManager;
+    }
+
+    /**
      * Refresh the entire application
      */
     async refresh() {
@@ -199,8 +212,10 @@ export class App {
      */
     handleError(error, context = '') {
         console.error(`Application error in ${context}:`, error);
-        
-        // You can add global error handling logic here
-        // For example, showing a toast notification or error modal
+
+        // Show error notification using the notification system
+        if (this.notificationManager) {
+            this.notificationManager.error(`An error occurred${context ? ` in ${context}` : ''}: ${error.message}`);
+        }
     }
 }

@@ -5,8 +5,9 @@
 import { ApiUtils } from '../utils/ApiUtils.mjs';
 
 export class ReactionManager {
-    constructor(authModal) {
+    constructor(authModal, notificationManager = null) {
         this.authModal = authModal;
+        this.notificationManager = notificationManager;
         this.setupGlobalEventListeners();
     }
 
@@ -64,7 +65,7 @@ export class ReactionManager {
             if (errorInfo.requiresAuth) {
                 this.authModal.showLoginModal();
             } else {
-                alert(errorInfo.message);
+                this.showNotification(errorInfo.message, 'error');
             }
         }
     }
@@ -91,7 +92,7 @@ export class ReactionManager {
             if (errorInfo.requiresAuth) {
                 this.authModal.showLoginModal();
             } else {
-                alert(errorInfo.message);
+                this.showNotification(errorInfo.message, 'error');
             }
         }
     }
@@ -223,5 +224,27 @@ export class ReactionManager {
             console.error(`Error getting reactions for comment ${commentId}:`, error);
             return { likes: 0, dislikes: 0 };
         }
+    }
+
+    /**
+     * Show notification using the notification manager or fallback to alert
+     * @param {string} message - Message to display
+     * @param {string} type - Notification type: 'success', 'error', 'warning', 'info'
+     */
+    showNotification(message, type = 'info') {
+        if (this.notificationManager) {
+            this.notificationManager.showToast(message, type);
+        } else {
+            // Fallback to browser alert if notification manager is not available
+            alert(message);
+        }
+    }
+
+    /**
+     * Set the notification manager (for dependency injection)
+     * @param {NotificationManager} notificationManager - Notification manager instance
+     */
+    setNotificationManager(notificationManager) {
+        this.notificationManager = notificationManager;
     }
 }
