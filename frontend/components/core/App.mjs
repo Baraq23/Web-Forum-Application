@@ -12,6 +12,8 @@ import { PostManager } from '../posts/PostManager.mjs';
 import { PostForm } from '../posts/PostForm.mjs';
 import { CommentManager } from '../comments/CommentManager.mjs';
 import { NotificationManager } from '../notifications/NotificationManager.mjs';
+import { NotificationTester } from '../notifications/NotificationTester.mjs';
+import { ApiUtils } from '../utils/ApiUtils.mjs';
 
 export class App {
     constructor() {
@@ -36,6 +38,9 @@ export class App {
         try {
             // Initialize notification system first
             this.notificationManager = new NotificationManager();
+
+            // Set notification manager in ApiUtils for global error handling
+            ApiUtils.setNotificationManager(this.notificationManager);
 
             // Initialize core managers
             this.authManager = new AuthManager();
@@ -95,6 +100,15 @@ export class App {
             // Setup the application
             await this.setupApp();
             console.log('Forum application initialized successfully');
+
+            // Initialize notification tester in development
+            if (window.location.hostname === 'localhost') {
+                this.notificationTester = new NotificationTester(this.notificationManager);
+                // Make tester available globally for console access
+                window.notificationTester = this.notificationTester;
+                window.testNotifications = () => this.notificationTester.runAllTests();
+                console.log('🧪 Notification tester available: window.testNotifications() or window.notificationTester');
+            }
         } catch (error) {
             console.error('Error initializing application:', error);
         }
