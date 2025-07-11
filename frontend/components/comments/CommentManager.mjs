@@ -7,9 +7,10 @@ import { TimeUtils } from '../utils/TimeUtils.mjs';
 import { PostCard } from '../posts/PostCard.mjs';
 
 export class CommentManager {
-    constructor(authModal, reactionManager) {
+    constructor(authModal, reactionManager, notificationManager = null) {
         this.authModal = authModal;
         this.reactionManager = reactionManager;
+        this.notificationManager = notificationManager;
     }
 
     /**
@@ -228,7 +229,7 @@ export class CommentManager {
         const parentCommentId = form.getAttribute('comment-id'); // For replies
 
         if (!content) {
-            alert('Comment cannot be empty');
+            this.showNotification('Comment cannot be empty. Please write something!', 'warning');
             return;
         }
 
@@ -241,7 +242,7 @@ export class CommentManager {
             await this.handleTopLevelCommentSubmit(form, content, postId);
         } else {
             console.error('No post ID or parent comment ID found');
-            alert('Error: Could not determine where to post the comment');
+            this.showNotification('Error: Could not determine where to post the comment. Please try again.', 'error');
             return;
         }
     }
@@ -279,9 +280,20 @@ export class CommentManager {
             const errorInfo = ApiUtils.handleError(error, 'comment creation');
 
             if (errorInfo.requiresAuth) {
-                this.authModal.showLoginModal();
+                this.showNotification('You need to be logged in to post comments.', 'warning');
+                setTimeout(() => {
+                    this.showNotification('Join the conversation by signing in or creating an account!', 'info');
+                }, 1500);
+                setTimeout(() => {
+                    this.authModal.showLoginModal();
+                }, 3000);
             } else {
-                alert(`Failed to post comment: ${errorInfo.message}`);
+                this.showNotification(`Failed to post comment: ${errorInfo.message}`, 'error');
+                if (errorInfo.suggestion) {
+                    setTimeout(() => {
+                        this.showNotification(errorInfo.suggestion, 'info');
+                    }, 2000);
+                }
             }
         }
     }
@@ -324,9 +336,20 @@ export class CommentManager {
             const errorInfo = ApiUtils.handleError(error, 'reply creation');
 
             if (errorInfo.requiresAuth) {
-                this.authModal.showLoginModal();
+                this.showNotification('You need to be logged in to reply to comments.', 'warning');
+                setTimeout(() => {
+                    this.showNotification('Sign in to join the discussion and reply to comments!', 'info');
+                }, 1500);
+                setTimeout(() => {
+                    this.authModal.showLoginModal();
+                }, 3000);
             } else {
-                alert(`Failed to post reply: ${errorInfo.message}`);
+                this.showNotification(`Failed to post reply: ${errorInfo.message}`, 'error');
+                if (errorInfo.suggestion) {
+                    setTimeout(() => {
+                        this.showNotification(errorInfo.suggestion, 'info');
+                    }, 2000);
+                }
             }
         }
     }
@@ -822,5 +845,27 @@ export class CommentManager {
                 this.adjustForMobile();
             }, 100);
         });
+    }
+
+    /**
+     * Show notification using the notification manager or fallback to alert
+     * @param {string} message - Message to display
+     * @param {string} type - Notification type: 'success', 'error', 'warning', 'info'
+     */
+    showNotification(message, type = 'info') {
+        if (this.notificationManager) {
+            this.notificationManager.showToast(message, type);
+        } else {
+            // Fallback to browser alert if notification manager is not available
+            alert(message);
+        }
+    }
+
+    /**
+     * Set the notification manager (for dependency injection)
+     * @param {NotificationManager} notificationManager - Notification manager instance
+     */
+    setNotificationManager(notificationManager) {
+        this.notificationManager = notificationManager;
     }
 }

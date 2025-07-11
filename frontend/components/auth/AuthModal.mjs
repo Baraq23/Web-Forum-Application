@@ -5,13 +5,14 @@
 import { AuthManager } from './AuthManager.mjs';
 
 export class AuthModal {
-    constructor(authManager, onAuthSuccess) {
+    constructor(authManager, onAuthSuccess, notificationManager = null) {
         this.authManager = authManager;
         this.onAuthSuccess = onAuthSuccess;
+        this.notificationManager = notificationManager;
         this.modal = null;
         this.mainContainer = null;
         this.cont = null;
-        
+
         this.init();
     }
 
@@ -102,31 +103,148 @@ export class AuthModal {
     }
 
     /**
+     * Handle login form submission
+     */
+    async handleLoginSubmit() {
+        const email = document.getElementById('signin-email').value;
+        const password = document.getElementById('signin-password').value;
+
+        if (!email || !password) {
+            this.showNotification('Please fill in all fields', 'warning');
+            return;
+        }
+
+        try {
+            const result = await this.authManager.login(email, password);
+
+            if (result.success) {
+                this.showNotification('Login successful! Welcome back!', 'success');
+                this.hideModal();
+                if (this.onAuthSuccess) {
+                    this.onAuthSuccess(result.user);
+                }
+            } else {
+                // Show specific error message
+                this.showNotification('Invalid email or password. Please check your credentials and try again.', 'error');
+
+                // Show suggestion after a brief delay
+                setTimeout(() => {
+                    this.showNotification('Don\'t have an account? Click "Sign Up" to create one!', 'info');
+                }, 2000);
+            }
+        } catch (error) {
+            console.error('Login error:', error);
+            this.showNotification('Unable to log in. Please check your connection and try again.', 'error');
+        }
+    }
+
+    /**
      * Setup login form submission
      */
     setupLoginForm() {
         const signInBtn = document.querySelector('.signin-submit');
+        const emailInput = document.getElementById('signin-email');
+        const passwordInput = document.getElementById('signin-password');
+
+        // Button click handler
         if (signInBtn) {
             signInBtn.addEventListener('click', async () => {
-                const email = document.getElementById('signin-email').value;
-                const password = document.getElementById('signin-password').value;
+                await this.handleLoginSubmit();
+            });
+        }
 
-                if (!email || !password) {
-                    alert('Please fill in all fields');
-                    return;
-                }
-
-                const result = await this.authManager.login(email, password);
-
-                if (result.success) {
-                    this.hideModal();
-                    if (this.onAuthSuccess) {
-                        this.onAuthSuccess(result.user);
-                    }
-                } else {
-                    alert('Login failed. Please check your credentials.');
+        // Enter key handlers for input fields
+        if (emailInput) {
+            emailInput.addEventListener('keydown', async (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    await this.handleLoginSubmit();
                 }
             });
+        }
+
+        if (passwordInput) {
+            passwordInput.addEventListener('keydown', async (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    await this.handleLoginSubmit();
+                }
+            });
+        }
+    }
+
+    /**
+     * Handle signup form submission
+     */
+    async handleSignupSubmit() {
+        const formData = this.getSignupFormData();
+
+        // Validate form data
+        const validation = this.authManager.validateRegistrationData(formData);
+        if (!validation.valid) {
+            this.showNotification(validation.error, 'warning');
+            return;
+        }
+
+        // Validate avatar file
+        const avatarInput = document.getElementById("signup-avatar");
+        if (avatarInput.files.length > 0) {
+            const avatarValidation = this.authManager.validateAvatarFile(avatarInput.files[0]);
+            if (!avatarValidation.valid) {
+                this.showNotification(avatarValidation.error, 'warning');
+                return;
+            }
+        }
+
+        // Create FormData for submission
+        const submitFormData = new FormData();
+        submitFormData.append("username", formData.username);
+        submitFormData.append("email", formData.email);
+        submitFormData.append("password", formData.password);
+
+        if (avatarInput.files.length > 0) {
+            submitFormData.append("avatar", avatarInput.files[0]);
+        }
+
+        try {
+            const result = await this.authManager.register(submitFormData);
+
+            if (result.success) {
+                this.showNotification('Registration successful! Welcome to the forum! 🎉', 'success');
+                this.hideModal();
+                if (this.onAuthSuccess) {
+                    this.onAuthSuccess(result.user);
+                }
+            } else {
+                // Provide specific error messages based on the error type
+                let errorMessage = result.error;
+                let suggestion = '';
+
+                if (errorMessage.includes('email') && errorMessage.includes('exists')) {
+                    errorMessage = 'This email address is already registered.';
+                    suggestion = 'Try logging in instead, or use a different email address.';
+                } else if (errorMessage.includes('username') && errorMessage.includes('exists')) {
+                    errorMessage = 'This username is already taken.';
+                    suggestion = 'Please choose a different username.';
+                } else if (errorMessage.includes('password')) {
+                    errorMessage = 'Password does not meet requirements.';
+                    suggestion = 'Password must be at least 8 characters long.';
+                } else if (errorMessage.includes('email') && errorMessage.includes('invalid')) {
+                    errorMessage = 'Please enter a valid email address.';
+                    suggestion = 'Check the email format and try again.';
+                }
+
+                this.showNotification(errorMessage, 'error');
+
+                if (suggestion) {
+                    setTimeout(() => {
+                        this.showNotification(suggestion, 'info');
+                    }, 2000);
+                }
+            }
+        } catch (error) {
+            console.error('Registration error:', error);
+            this.showNotification('Unable to create account. Please check your connection and try again.', 'error');
         }
     }
 
@@ -135,49 +253,30 @@ export class AuthModal {
      */
     setupSignupForm() {
         const signUpBtn = document.querySelector('.signup-submit');
+        const usernameInput = document.getElementById('signup-username');
+        const emailInput = document.getElementById('signup-email');
+        const passwordInput = document.getElementById('signup-password');
+        const confirmPasswordInput = document.getElementById('signup-confirm');
+
+        // Button click handler
         if (signUpBtn) {
             signUpBtn.addEventListener('click', async () => {
-                const formData = this.getSignupFormData();
-
-                // Validate form data
-                const validation = this.authManager.validateRegistrationData(formData);
-                if (!validation.valid) {
-                    alert(validation.error);
-                    return;
-                }
-
-                // Validate avatar file
-                const avatarInput = document.getElementById("signup-avatar");
-                if (avatarInput.files.length > 0) {
-                    const avatarValidation = this.authManager.validateAvatarFile(avatarInput.files[0]);
-                    if (!avatarValidation.valid) {
-                        alert(avatarValidation.error);
-                        return;
-                    }
-                }
-
-                // Create FormData for submission
-                const submitFormData = new FormData();
-                submitFormData.append("username", formData.username);
-                submitFormData.append("email", formData.email);
-                submitFormData.append("password", formData.password);
-
-                if (avatarInput.files.length > 0) {
-                    submitFormData.append("avatar", avatarInput.files[0]);
-                }
-
-                const result = await this.authManager.register(submitFormData);
-
-                if (result.success) {
-                    this.hideModal();
-                    if (this.onAuthSuccess) {
-                        this.onAuthSuccess(result.user);
-                    }
-                } else {
-                    alert(`Registration failed: ${result.error}`);
-                }
+                await this.handleSignupSubmit();
             });
         }
+
+        // Enter key handlers for input fields
+        const inputs = [usernameInput, emailInput, passwordInput, confirmPasswordInput];
+        inputs.forEach(input => {
+            if (input) {
+                input.addEventListener('keydown', async (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        await this.handleSignupSubmit();
+                    }
+                });
+            }
+        });
     }
 
     /**
@@ -298,5 +397,27 @@ export class AuthModal {
                 this.hideModal();
             }
         });
+    }
+
+    /**
+     * Show notification using the notification manager or fallback to alert
+     * @param {string} message - Message to display
+     * @param {string} type - Notification type: 'success', 'error', 'warning', 'info'
+     */
+    showNotification(message, type = 'info') {
+        if (this.notificationManager) {
+            this.notificationManager.showToast(message, type);
+        } else {
+            // Fallback to browser alert if notification manager is not available
+            alert(message);
+        }
+    }
+
+    /**
+     * Set the notification manager (for dependency injection)
+     * @param {NotificationManager} notificationManager - Notification manager instance
+     */
+    setNotificationManager(notificationManager) {
+        this.notificationManager = notificationManager;
     }
 }

@@ -5,8 +5,9 @@
 import { ApiUtils } from '../utils/ApiUtils.mjs';
 
 export class ReactionManager {
-    constructor(authModal) {
+    constructor(authModal, notificationManager = null) {
         this.authModal = authModal;
+        this.notificationManager = notificationManager;
         this.setupGlobalEventListeners();
     }
 
@@ -60,11 +61,22 @@ export class ReactionManager {
             await this.loadPostsLikes();
         } catch (error) {
             const errorInfo = ApiUtils.handleError(error, 'post reaction');
-            
+
             if (errorInfo.requiresAuth) {
-                this.authModal.showLoginModal();
+                this.showNotification('You need to be logged in to like or dislike posts.', 'warning');
+                setTimeout(() => {
+                    this.showNotification('Sign in to interact with posts and join the conversation!', 'info');
+                }, 1500);
+                setTimeout(() => {
+                    this.authModal.showLoginModal();
+                }, 3000);
             } else {
-                alert(errorInfo.message);
+                this.showNotification(errorInfo.message, 'error');
+                if (errorInfo.suggestion) {
+                    setTimeout(() => {
+                        this.showNotification(errorInfo.suggestion, 'info');
+                    }, 2000);
+                }
             }
         }
     }
@@ -87,11 +99,22 @@ export class ReactionManager {
             await this.loadCommentsLikes();
         } catch (error) {
             const errorInfo = ApiUtils.handleError(error, 'comment reaction');
-            
+
             if (errorInfo.requiresAuth) {
-                this.authModal.showLoginModal();
+                this.showNotification('You need to be logged in to like or dislike comments.', 'warning');
+                setTimeout(() => {
+                    this.showNotification('Join the community to engage with comments!', 'info');
+                }, 1500);
+                setTimeout(() => {
+                    this.authModal.showLoginModal();
+                }, 3000);
             } else {
-                alert(errorInfo.message);
+                this.showNotification(errorInfo.message, 'error');
+                if (errorInfo.suggestion) {
+                    setTimeout(() => {
+                        this.showNotification(errorInfo.suggestion, 'info');
+                    }, 2000);
+                }
             }
         }
     }
@@ -223,5 +246,27 @@ export class ReactionManager {
             console.error(`Error getting reactions for comment ${commentId}:`, error);
             return { likes: 0, dislikes: 0 };
         }
+    }
+
+    /**
+     * Show notification using the notification manager or fallback to alert
+     * @param {string} message - Message to display
+     * @param {string} type - Notification type: 'success', 'error', 'warning', 'info'
+     */
+    showNotification(message, type = 'info') {
+        if (this.notificationManager) {
+            this.notificationManager.showToast(message, type);
+        } else {
+            // Fallback to browser alert if notification manager is not available
+            alert(message);
+        }
+    }
+
+    /**
+     * Set the notification manager (for dependency injection)
+     * @param {NotificationManager} notificationManager - Notification manager instance
+     */
+    setNotificationManager(notificationManager) {
+        this.notificationManager = notificationManager;
     }
 }

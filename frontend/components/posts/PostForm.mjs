@@ -5,10 +5,11 @@
 import { ApiUtils } from '../utils/ApiUtils.mjs';
 
 export class PostForm {
-    constructor(categoryManager, authModal, onPostCreated) {
+    constructor(categoryManager, authModal, onPostCreated, notificationManager = null) {
         this.categoryManager = categoryManager;
         this.authModal = authModal;
         this.onPostCreated = onPostCreated;
+        this.notificationManager = notificationManager;
         this.form = null;
     }
 
@@ -89,7 +90,7 @@ export class PostForm {
         const validation = this.validateFormData(formData);
 
         if (!validation.valid) {
-            alert(validation.error);
+            this.showNotification(validation.error, 'warning');
             return;
         }
 
@@ -99,18 +100,30 @@ export class PostForm {
             const result = await ApiUtils.post('/api/posts/create', submitFormData, true, true);
 
             // Success! Reset form and notify parent
+            this.showNotification('Post created successfully!', 'success');
             this.resetForm();
-            
+
             if (this.onPostCreated) {
                 await this.onPostCreated();
             }
         } catch (error) {
             const errorInfo = ApiUtils.handleError(error, 'post creation');
-            
+
             if (errorInfo.requiresAuth) {
-                this.authModal.showLoginModal();
+                this.showNotification('You need to be logged in to create posts.', 'warning');
+                setTimeout(() => {
+                    this.showNotification('Click "Login" to sign in or "Sign Up" to create an account.', 'info');
+                }, 1500);
+                setTimeout(() => {
+                    this.authModal.showLoginModal();
+                }, 3000);
             } else {
-                alert(`Failed to create post: ${errorInfo.message}`);
+                this.showNotification(`Failed to create post: ${errorInfo.message}`, 'error');
+                if (errorInfo.suggestion) {
+                    setTimeout(() => {
+                        this.showNotification(errorInfo.suggestion, 'info');
+                    }, 2000);
+                }
             }
         }
     }
@@ -177,5 +190,27 @@ export class PostForm {
     resetForm() {
         this.form.reset();
         this.categoryManager.resetCategoryDropdown();
+    }
+
+    /**
+     * Show notification using the notification manager or fallback to alert
+     * @param {string} message - Message to display
+     * @param {string} type - Notification type: 'success', 'error', 'warning', 'info'
+     */
+    showNotification(message, type = 'info') {
+        if (this.notificationManager) {
+            this.notificationManager.showToast(message, type);
+        } else {
+            // Fallback to browser alert if notification manager is not available
+            alert(message);
+        }
+    }
+
+    /**
+     * Set the notification manager (for dependency injection)
+     * @param {NotificationManager} notificationManager - Notification manager instance
+     */
+    setNotificationManager(notificationManager) {
+        this.notificationManager = notificationManager;
     }
 }

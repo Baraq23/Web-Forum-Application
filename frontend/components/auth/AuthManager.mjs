@@ -80,6 +80,9 @@ export class AuthManager {
             return true;
         } catch (error) {
             console.error('Logout failed:', error);
+            // Even if the API call fails, clear local state for security
+            this.currentUser = null;
+            this.isAuthenticated = false;
             return false;
         }
     }
