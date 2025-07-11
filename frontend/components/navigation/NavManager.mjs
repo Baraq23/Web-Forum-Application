@@ -3,10 +3,11 @@
  */
 
 export class NavManager {
-    constructor(authManager, authModal, router = null) {
+    constructor(authManager, authModal, router = null, notificationManager = null) {
         this.authManager = authManager;
         this.authModal = authModal;
         this.router = router;
+        this.notificationManager = notificationManager;
         this.navAuth = document.getElementById("navAuth");
 
         this.init();
@@ -129,10 +130,14 @@ export class NavManager {
         const success = await this.authManager.logout();
 
         if (success) {
+            // Show logout success notification
+            this.showNotification('You have been logged out successfully. See you next time!', 'success');
+
             this.renderUnauthenticatedNav();
             this.router.navigate('/');
         } else {
             console.error("Logout failed");
+            this.showNotification('Logout failed. Please try again.', 'error');
         }
     }
 
@@ -227,5 +232,27 @@ export class NavManager {
      */
     setRouter(router) {
         this.router = router;
+    }
+
+    /**
+     * Show notification using the notification manager or fallback to alert
+     * @param {string} message - Message to display
+     * @param {string} type - Notification type: 'success', 'error', 'warning', 'info'
+     */
+    showNotification(message, type = 'info') {
+        if (this.notificationManager) {
+            this.notificationManager.showToast(message, type);
+        } else {
+            // Fallback to browser alert if notification manager is not available
+            alert(message);
+        }
+    }
+
+    /**
+     * Set the notification manager (for dependency injection)
+     * @param {NotificationManager} notificationManager - Notification manager instance
+     */
+    setNotificationManager(notificationManager) {
+        this.notificationManager = notificationManager;
     }
 }

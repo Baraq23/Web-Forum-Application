@@ -46,7 +46,7 @@ export class App {
             this.authModal = new AuthModal(this.authManager, (user) => this.onAuthSuccess(user), this.notificationManager);
             
             // Initialize navigation
-            this.navManager = new NavManager(this.authManager, this.authModal);
+            this.navManager = new NavManager(this.authManager, this.authModal, null, this.notificationManager);
 
             // Initialize mobile navigation
             this.mobileNavManager = new MobileNavManager(this);
