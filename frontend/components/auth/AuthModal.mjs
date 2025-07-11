@@ -103,32 +103,108 @@ export class AuthModal {
     }
 
     /**
+     * Handle login form submission
+     */
+    async handleLoginSubmit() {
+        const email = document.getElementById('signin-email').value;
+        const password = document.getElementById('signin-password').value;
+
+        if (!email || !password) {
+            this.showNotification('Please fill in all fields', 'warning');
+            return;
+        }
+
+        const result = await this.authManager.login(email, password);
+
+        if (result.success) {
+            this.showNotification('Login successful!', 'success');
+            this.hideModal();
+            if (this.onAuthSuccess) {
+                this.onAuthSuccess(result.user);
+            }
+        } else {
+            this.showNotification('Login failed. Please check your credentials.', 'error');
+        }
+    }
+
+    /**
      * Setup login form submission
      */
     setupLoginForm() {
         const signInBtn = document.querySelector('.signin-submit');
+        const emailInput = document.getElementById('signin-email');
+        const passwordInput = document.getElementById('signin-password');
+
+        // Button click handler
         if (signInBtn) {
             signInBtn.addEventListener('click', async () => {
-                const email = document.getElementById('signin-email').value;
-                const password = document.getElementById('signin-password').value;
+                await this.handleLoginSubmit();
+            });
+        }
 
-                if (!email || !password) {
-                    this.showNotification('Please fill in all fields', 'warning');
-                    return;
-                }
-
-                const result = await this.authManager.login(email, password);
-
-                if (result.success) {
-                    this.showNotification('Login successful!', 'success');
-                    this.hideModal();
-                    if (this.onAuthSuccess) {
-                        this.onAuthSuccess(result.user);
-                    }
-                } else {
-                    this.showNotification('Login failed. Please check your credentials.', 'error');
+        // Enter key handlers for input fields
+        if (emailInput) {
+            emailInput.addEventListener('keydown', async (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    await this.handleLoginSubmit();
                 }
             });
+        }
+
+        if (passwordInput) {
+            passwordInput.addEventListener('keydown', async (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    await this.handleLoginSubmit();
+                }
+            });
+        }
+    }
+
+    /**
+     * Handle signup form submission
+     */
+    async handleSignupSubmit() {
+        const formData = this.getSignupFormData();
+
+        // Validate form data
+        const validation = this.authManager.validateRegistrationData(formData);
+        if (!validation.valid) {
+            this.showNotification(validation.error, 'warning');
+            return;
+        }
+
+        // Validate avatar file
+        const avatarInput = document.getElementById("signup-avatar");
+        if (avatarInput.files.length > 0) {
+            const avatarValidation = this.authManager.validateAvatarFile(avatarInput.files[0]);
+            if (!avatarValidation.valid) {
+                this.showNotification(avatarValidation.error, 'warning');
+                return;
+            }
+        }
+
+        // Create FormData for submission
+        const submitFormData = new FormData();
+        submitFormData.append("username", formData.username);
+        submitFormData.append("email", formData.email);
+        submitFormData.append("password", formData.password);
+
+        if (avatarInput.files.length > 0) {
+            submitFormData.append("avatar", avatarInput.files[0]);
+        }
+
+        const result = await this.authManager.register(submitFormData);
+
+        if (result.success) {
+            this.showNotification('Registration successful! Welcome to the forum!', 'success');
+            this.hideModal();
+            if (this.onAuthSuccess) {
+                this.onAuthSuccess(result.user);
+            }
+        } else {
+            this.showNotification(`Registration failed: ${result.error}`, 'error');
         }
     }
 
@@ -137,50 +213,30 @@ export class AuthModal {
      */
     setupSignupForm() {
         const signUpBtn = document.querySelector('.signup-submit');
+        const usernameInput = document.getElementById('signup-username');
+        const emailInput = document.getElementById('signup-email');
+        const passwordInput = document.getElementById('signup-password');
+        const confirmPasswordInput = document.getElementById('signup-confirm');
+
+        // Button click handler
         if (signUpBtn) {
             signUpBtn.addEventListener('click', async () => {
-                const formData = this.getSignupFormData();
-
-                // Validate form data
-                const validation = this.authManager.validateRegistrationData(formData);
-                if (!validation.valid) {
-                    this.showNotification(validation.error, 'warning');
-                    return;
-                }
-
-                // Validate avatar file
-                const avatarInput = document.getElementById("signup-avatar");
-                if (avatarInput.files.length > 0) {
-                    const avatarValidation = this.authManager.validateAvatarFile(avatarInput.files[0]);
-                    if (!avatarValidation.valid) {
-                        this.showNotification(avatarValidation.error, 'warning');
-                        return;
-                    }
-                }
-
-                // Create FormData for submission
-                const submitFormData = new FormData();
-                submitFormData.append("username", formData.username);
-                submitFormData.append("email", formData.email);
-                submitFormData.append("password", formData.password);
-
-                if (avatarInput.files.length > 0) {
-                    submitFormData.append("avatar", avatarInput.files[0]);
-                }
-
-                const result = await this.authManager.register(submitFormData);
-
-                if (result.success) {
-                    this.showNotification('Registration successful! Welcome to the forum!', 'success');
-                    this.hideModal();
-                    if (this.onAuthSuccess) {
-                        this.onAuthSuccess(result.user);
-                    }
-                } else {
-                    this.showNotification(`Registration failed: ${result.error}`, 'error');
-                }
+                await this.handleSignupSubmit();
             });
         }
+
+        // Enter key handlers for input fields
+        const inputs = [usernameInput, emailInput, passwordInput, confirmPasswordInput];
+        inputs.forEach(input => {
+            if (input) {
+                input.addEventListener('keydown', async (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        await this.handleSignupSubmit();
+                    }
+                });
+            }
+        });
     }
 
     /**
